@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id = "miCanvas" width= "700" height="700"> navegador no puede mostrar contenido de canvas</canvas>
+    <script >
+let canvas = document.getElementById("miCanvas");
+let ctx = canvas.getContext("2d");
+let posX = 100;
+let posY = 100;
+let miColor = getRandomColor();
+let direccion = '';
+let speed = 5;
+let puntos = 0;
+let enPausa = true;
+
+class Rectangulo {
+    constructor(x, y, width, height, color ,imgSrc = null) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+        this.image = null;
+
+        if(imgSrc){
+            this.image = new Image();
+            this.image.src = imgSrc;
+        }
+    }
+
+    draw() {
+        if (this.image) {
+            // Si la imagen está cargada, la dibujamos
+            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        } else {
+            // Si no hay imagen, dibujamos un rectángulo como antes
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    move() {
+        switch (direccion) {
+            case 'Up':
+                this.y -= speed;
+                if (this.y < 0) this.y = canvas.height - this.height;
+                break;
+            case 'Down':
+                this.y += speed;
+                if (this.y > canvas.height - this.height) this.y = 0;
+                break;
+            case 'Right':
+                this.x += speed;
+                if (this.x > canvas.width - this.width) this.x = 0;
+                break;
+            case 'Left':
+                this.x -= speed;
+                if (this.x < 0) this.x = canvas.width - this.width;
+                break;
+            default:
+                break;
+        }
+    }
+
+    checkCollision(otherRect) {
+        return (
+            this.x < otherRect.x + otherRect.width &&
+            this.x + this.width > otherRect.x &&
+            this.y < otherRect.y + otherRect.height &&
+            this.y + this.height > otherRect.y
+        );
+    }
+}
+
+class Obstaculo {
+    constructor(x, y, width, height, color) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+}
+
+let player = new Rectangulo(posX, posY, 50, 50, miColor, 'bomberman.png');
+let target = new Rectangulo(
+    Math.random() * (canvas.width - 50),
+    Math.random() * (canvas.height - 50),
+    50, 50, 'red', 'enemy.png'
+);
+
+
+const obstaculos = [
+    new Obstaculo(200, 100, 250, 25, 'red'),
+    new Obstaculo(200, 300, 250, 25, 'green'),
+    new Obstaculo(200, 500, 250, 25, 'purple')
+];
+
+document.addEventListener("keydown", function(event) {
+    event.preventDefault();
+    switch (event.key) {
+        case 'ArrowUp':
+            if(!enPausa) direccion = 'Up';
+            break;
+        case 'ArrowDown':
+            if(!enPausa)direccion = 'Down';
+            break;
+        case 'ArrowRight':
+            if(!enPausa)direccion = 'Right';
+            break;
+        case 'ArrowLeft':
+            if(!enPausa)direccion = 'Left';
+            break;
+        case 'Enter':
+            if(!enPausa)speed += 5;
+            break;
+        case ' ':
+            enPausa = !enPausa;
+            console.log('pausa')
+            console.log(enPausa);
+            
+        default:
+            break;
+    }
+});
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if(!enPausa){
+    player.move();
+    }
+
+    player.draw();
+
+    obstaculos.forEach(obstaculo => {
+        obstaculo.draw();
+
+        if (player.checkCollision(obstaculo)&& !enPausa) {
+            direccion = ''; 
+            console.log("Colisión con un obstáculo");
+        }
+    });
+
+    if (player.checkCollision(target) && !enPausa) {
+        target.x = Math.random() * (canvas.width - target.width);
+        target.y = Math.random() * (canvas.height - target.height);
+        target.color = getRandomColor();
+        puntos +=10;
+    }
+
+    target.draw();
+
+    ctx.font = "30px Arial";
+    ctx.fillText("Speed: " + speed, 150, 50);
+    ctx.font = "30px Arial";
+    ctx.fillText("Puntos: " + puntos, 300, 50);
+
+    if(enPausa){
+        ctx.font = "50 Arial";
+        ctx.fillStyle = "black";
+        ctx.fillText("PAUSA", canvas.width / 2 - 100, canvas.height / 2);
+    }
+
+    requestAnimationFrame(draw);
+}
+
+draw();
+
+function getRandomColor() {
+    const r = Math.floor(Math.random() * 256);
+    const g = Math.floor(Math.random() * 256);
+    const b = Math.floor(Math.random() * 256);
+    return `rgb(${r}, ${g}, ${b})`;
+}
+    </script>
+</body>
+</html>
