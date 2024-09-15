@@ -12,9 +12,8 @@ let canvas = document.getElementById("miCanvas");
 let ctx = canvas.getContext("2d");
 let posX = 100;
 let posY = 100;
-let miColor = getRandomColor();
 let direccion = '';
-let speed = 5;
+let speed = 3;
 let puntos = 0;
 let enPausa = true;
 let mover = null;
@@ -38,10 +37,8 @@ class Rectangulo {
 
     draw() {
         if (this.image) {
-            // Si la imagen está cargada, la dibujamos
             ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
         } else {
-            // Si no hay imagen, dibujamos un rectángulo como antes
             ctx.fillStyle = this.color;
             ctx.fillRect(this.x, this.y, this.width, this.height);
         }
@@ -79,7 +76,29 @@ class Rectangulo {
         );
     }
 }
-
+class Bomb{
+    constructor(x, y, width, height, color, imgSrc = null){
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+        this.image = null;
+    
+        if(imgSrc){
+            this.image = new Image();   
+            this.image.src = imgSrc;
+        }
+    }
+    draw() {
+        if (this.image) {
+            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+}
 class Obstaculo {
     constructor(x, y, width, height, color, imgSrc = null) {
         this.x = x;
@@ -96,37 +115,117 @@ class Obstaculo {
     }
     draw() {
         if (this.image) {
-            // Si la imagen está cargada, la dibujamos
             ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
         } else {
-            // Si no hay imagen, dibujamos un rectángulo como antes
             ctx.fillStyle = this.color;
             ctx.fillRect(this.x, this.y, this.width, this.height);
         }
     }
 }
+class Mapa{
+    constructor(x, y, width, height, color, imgSrc = null) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+        this.image = null;
 
-let player = new Rectangulo(posX, posY, 50, 50, miColor, 'bomberman.png');
+        if(imgSrc){
+            this.image = new Image();
+            this.image.src = imgSrc;
+        }
+    }
+    draw() {
+        if (this.image) {
+            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+}
+class Muro{
+    constructor(x, y, width, height, color, imgSrc = null) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.color = color;
+        this.image = null;
+
+        if(imgSrc){
+            this.image = new Image();
+            this.image.src = imgSrc;
+        }
+    }
+    draw() {
+        if (this.image) {
+            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        } else {
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+}
+let bloquesMuro =[];
+for(let i = 0; i < 24; i++){
+        bloqueX += 64;
+        bloquesMuro.push(new Muro(bloqueX, bloqueY +64, 32, 32, 'black', 'muro.png'));
+        bloquesMuro.push(new Muro(bloqueX, bloqueY + 576, 32, 32, 'black', 'muro.png'));
+    }
+    bloqueX = 64;  
+for(let x = bloqueX; x < canvas.width - 32; x += 64){
+    for(let y = bloqueY + 64; y < canvas.height - 128; y += 64){
+        bloquesMuro.push(new Muro(x, y, 32, 32, 'black', 'muro.png'));
+    }
+}
+    function drawMuro() {
+    bloquesMuro.forEach(muro => {
+        muro.draw();
+    });
+}
+
+let bloquesMapa = [];
+for(let i = 0; i < 24; i++){
+        bloqueX += 32;
+        bloquesMapa.push(new Mapa(bloqueX, bloqueY +32, 32, 32, 'black', 'pasto.png'));
+        bloquesMapa.push(new Mapa(bloqueX, bloqueY + 576, 32, 32, 'black', 'pasto.png'));
+    }
+    bloqueX = 32;  
+for(let x = bloqueX; x < canvas.width - 32; x += 32){
+    for(let y = bloqueY + 32; y < canvas.height - 64; y += 32){
+        bloquesMapa.push(new Mapa(x, y, 32, 32, 'black', 'pasto.png'));
+    }
+}
+
+let player = new Rectangulo(posX, posY, 32, 32, 'pink', 'bomberman.png');
 let target = new Rectangulo(
     Math.random() * (canvas.width - 50),
     Math.random() * (canvas.height - 50),
-    50, 50, 'red', 'enemy.png'
-);
+    50, 50, 'red', 'enemy.png'); 
 
+let bombas = [];
 
 const obstaculos = [];
-for(let i = 0; i < 24; i++){
-        obstaculos.push(new Obstaculo(bloqueX, bloqueY, 32, 32, 'black', 'muro.png'));
-        obstaculos.push(new Obstaculo(bloqueX, bloqueY + 608, 32, 32, 'black', 'muro.png'));
+bloqueX = 0;
+for(let i = 0; i < 25; i++){
+        obstaculos.push(new Obstaculo(bloqueX, bloqueY, 32, 32, 'black', 'bloque.png'));
+        obstaculos.push(new Obstaculo(bloqueX, bloqueY + 640, 32, 32, 'black', 'bloque.png'));
         bloqueX += 32;
     }
    bloqueX = 0;
    bloqueY = 0;
     for(let i = 0; i < 20; i++){
-        obstaculos.push(new Obstaculo(bloqueX, bloqueY, 32, 32, 'black', 'muro.png'));
-        obstaculos.push(new Obstaculo(bloqueX + 768, bloqueY, 32, 32, 'black', 'muro.png'));
+        obstaculos.push(new Obstaculo(bloqueX, bloqueY, 32, 32, 'black', 'bloque.png'));
+        obstaculos.push(new Obstaculo(bloqueX + 768, bloqueY, 32, 32, 'black', 'bloque.png'));
         bloqueY += 32;
     }
+    function drawMap() {
+    bloquesMapa.forEach(bloque => {
+        bloque.draw();
+    });
+}
 
 document.addEventListener("keydown", function(event) {
     event.preventDefault();
@@ -150,7 +249,10 @@ document.addEventListener("keydown", function(event) {
             enPausa = !enPausa;
             console.log('pausa')
             console.log(enPausa);
-            
+            break;
+        case 'a':
+            bombas.push(new Bomb(player.x, player.y, 32, 32, 'blue','bomba.png'));
+            break;
         default:
             break;
     }
@@ -163,6 +265,9 @@ function draw() {
     player.move();
     }
 
+    drawMap();
+    bombas.forEach(bomba =>bomba.draw());
+    drawMuro();
     player.draw();
 
     obstaculos.forEach(obstaculo => {
@@ -177,7 +282,6 @@ function draw() {
     if (player.checkCollision(target) && !enPausa) {
         target.x = Math.random() * (canvas.width - target.width);
         target.y = Math.random() * (canvas.height - target.height);
-        target.color = getRandomColor();
         puntos +=10;
     }
 
@@ -198,13 +302,6 @@ function draw() {
 }
 
 draw();
-
-function getRandomColor() {
-    const r = Math.floor(Math.random() * 256);
-    const g = Math.floor(Math.random() * 256);
-    const b = Math.floor(Math.random() * 256);
-    return `rgb(${r}, ${g}, ${b})`;
-}
     </script>
 </body>
 </html>
