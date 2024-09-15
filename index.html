@@ -6,7 +6,7 @@
     <title>Document</title>
 </head>
 <body>
-    <canvas id = "miCanvas" width= "700" height="700"> navegador no puede mostrar contenido de canvas</canvas>
+    <canvas id = "miCanvas" width= "800" height="700"> navegador no puede mostrar contenido de canvas</canvas>
     <script >
 let canvas = document.getElementById("miCanvas");
 let ctx = canvas.getContext("2d");
@@ -18,6 +18,8 @@ let speed = 5;
 let puntos = 0;
 let enPausa = true;
 let mover = null;
+let bloqueX = 0;
+let bloqueY = 0;
 
 class Rectangulo {
     constructor(x, y, width, height, color ,imgSrc = null) {
@@ -112,11 +114,19 @@ let target = new Rectangulo(
 );
 
 
-const obstaculos = [
-    new Obstaculo(200, 100, 32, 32, 'red', 'muro.png'),
-    new Obstaculo(200, 300, 32, 32, 'green', 'muro.png'),
-    new Obstaculo(200, 500, 32, 32, 'purple', 'muro.png')
-];
+const obstaculos = [];
+for(let i = 0; i < 24; i++){
+        obstaculos.push(new Obstaculo(bloqueX, bloqueY, 32, 32, 'black', 'muro.png'));
+        obstaculos.push(new Obstaculo(bloqueX, bloqueY + 608, 32, 32, 'black', 'muro.png'));
+        bloqueX += 32;
+    }
+   bloqueX = 0;
+   bloqueY = 0;
+    for(let i = 0; i < 20; i++){
+        obstaculos.push(new Obstaculo(bloqueX, bloqueY, 32, 32, 'black', 'muro.png'));
+        obstaculos.push(new Obstaculo(bloqueX + 768, bloqueY, 32, 32, 'black', 'muro.png'));
+        bloqueY += 32;
+    }
 
 document.addEventListener("keydown", function(event) {
     event.preventDefault();
