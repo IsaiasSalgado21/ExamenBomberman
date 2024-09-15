@@ -17,6 +17,7 @@ let direccion = '';
 let speed = 5;
 let puntos = 0;
 let enPausa = true;
+let mover = null;
 
 class Rectangulo {
     constructor(x, y, width, height, color ,imgSrc = null) {
@@ -78,17 +79,28 @@ class Rectangulo {
 }
 
 class Obstaculo {
-    constructor(x, y, width, height, color) {
+    constructor(x, y, width, height, color, imgSrc = null) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.color = color;
-    }
+        this.image = null;
 
+        if(imgSrc){
+            this.image = new Image();
+            this.image.src = imgSrc;
+        }
+    }
     draw() {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        if (this.image) {
+            // Si la imagen está cargada, la dibujamos
+            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        } else {
+            // Si no hay imagen, dibujamos un rectángulo como antes
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
     }
 }
 
@@ -101,9 +113,9 @@ let target = new Rectangulo(
 
 
 const obstaculos = [
-    new Obstaculo(200, 100, 250, 25, 'red'),
-    new Obstaculo(200, 300, 250, 25, 'green'),
-    new Obstaculo(200, 500, 250, 25, 'purple')
+    new Obstaculo(200, 100, 32, 32, 'red', 'muro.png'),
+    new Obstaculo(200, 300, 32, 32, 'green', 'muro.png'),
+    new Obstaculo(200, 500, 32, 32, 'purple', 'muro.png')
 ];
 
 document.addEventListener("keydown", function(event) {
@@ -147,7 +159,7 @@ function draw() {
         obstaculo.draw();
 
         if (player.checkCollision(obstaculo)&& !enPausa) {
-            direccion = ''; 
+            direccion = mover; 
             console.log("Colisión con un obstáculo");
         }
     });
