@@ -15,7 +15,7 @@ let posY = 100;
 let direccion = '';
 let speed = 3;
 let puntos = 0;
-let enPausa = true;
+let enPausa = false;
 let mover = null;
 let bloqueX = 0;
 let bloqueY = 0;
@@ -83,6 +83,11 @@ class Bomb{
         this.height = height;
         this.color = color;
         this.image = null;
+        this.explosion = false;
+        this.radioExplosion = 32 * 2;
+        this.duracionExplosion = 2000;
+        this.tiempoExplosion = 2000;
+        this.explosionTermino = false;
     
         if(imgSrc){
             this.image = new Image();   
@@ -90,12 +95,39 @@ class Bomb{
         }
     }
     draw() {
-        if (this.image) {
+        if(this.image){
             ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-        } else {
-            ctx.fillStyle = this.color;
-            ctx.fillRect(this.x, this.y, this.width, this.height);
+            if(this.explosion){
+                ctx.fillStyle = 'orange';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillRect(this.x + this.width, this.y, this.radioExplosion, this.height);
+                ctx.fillRect(this.x - this.radioExplosion, this.y, this.radioExplosion, this.height);
+                ctx.fillRect(this.x, this.y - this.radioExplosion, this.width, this.radioExplosion);
+                ctx.fillRect(this.x, this.y + this.height, this.width, this.radioExplosion);
+            }
         }
+    }
+    explotar(){
+        this.explosion = true;
+        this.tiempoExplosion = performance.now();
+    }
+    update(){
+        if(this.explosion){
+            const elapsed = performance.now() - this.tiempoExplosion;
+            if(elapsed > this.duracionExplosion){
+                this.explosion = false;
+                this.explosionTermino = true;
+            }
+        }
+    }
+    getExplosionArea(){
+        return{
+            centro: { x: this.x, y: this.y, width: this.width, height: this.height },
+            derecha: { x: this.x + this.width, y: this.y, width: this.radioExplosion, height: this.height },
+            izquierda: { x: this.x - this.radioExplosion, y: this.y, width: this.radioExplosion, height: this.height },
+            arriba: { x: this.x, y: this.y - this.radioExplosion, width: this.width, height: this.radioExplosion },
+            abajo: { x: this.x, y: this.y + this.height, width: this.width, height: this.radioExplosion }
+        };
     }
 }
 class Obstaculo {
@@ -145,13 +177,14 @@ class Mapa{
     }
 }
 class Muro{
-    constructor(x, y, width, height, color, imgSrc = null) {
+    constructor(x, y, width, height, color, imgSrc = null, destruible = false) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.color = color;
         this.image = null;
+        this.destruible = destruible;
 
         if(imgSrc){
             this.image = new Image();
@@ -200,10 +233,6 @@ for(let x = bloqueX; x < canvas.width - 32; x += 32){
 }
 
 let player = new Rectangulo(posX, posY, 32, 32, 'pink', 'bomberman.png');
-let target = new Rectangulo(
-    Math.random() * (canvas.width - 50),
-    Math.random() * (canvas.height - 50),
-    50, 50, 'red', 'enemy.png'); 
 
 let bombas = [];
 
@@ -227,6 +256,15 @@ for(let i = 0; i < 25; i++){
     });
 }
 
+let muroDestruible = [];
+function generarMuros(){
+    for(let i = 1; i < 10; i++){
+        for(let j = 1; j < 10; j++)[
+
+        ]
+    }
+}
+
 document.addEventListener("keydown", function(event) {
     event.preventDefault();
     if(event.key in teclaPresionada){
@@ -234,7 +272,11 @@ document.addEventListener("keydown", function(event) {
         
     }
     if(event.key === 'a'){
-        bombas.push(new Bomb(player.x, player.y, 32, 32, 'blue', 'bomba.png'));
+        let bomba = new Bomb(player.x, player.y, 32, 32, 'blue', 'bomba.png');
+        bombas.push(bomba);
+        setTimeout(()=>{
+            bomba.explotar();
+        },2000);
     }
     if(event.key === ' '){
         enPausa = !enPausa;
@@ -254,10 +296,30 @@ function draw() {
     if(!enPausa){
     player.move();
     }
-
     drawMap();
-    bombas.forEach(bomba =>bomba.draw());
+    bombas.forEach(bomba =>{
+        if(bomba.explosion){
+            let explosionArea = bomba.getExplosionArea();
+            bloquesMuro.forEach((muro, i) => {
+                if (muro.destruible) {
+                    if (checkRectCollision(explosionArea.derecha, muro) ||
+                        checkRectCollision(explosionArea.izquierda, muro) ||
+                        checkRectCollision(explosionArea.arriba, muro) ||
+                        checkRectCollision(explosionArea.abajo, muro)) {
+                        bloquesMuro.splice(i, 1);
+                    }
+                }
+            });
+        }
+    });
+
+    bombas = bombas.filter(bomba => !bomba.explosionTermino);
+    bombas.forEach(bomba =>{
+        bomba.update();
+        bomba.draw();
+    });
     drawMuro();
+    
     player.draw();
 
     bloquesMuro.forEach(muro =>{
@@ -276,14 +338,6 @@ function draw() {
         }
     });
 
-    if (player.checkCollision(target) && !enPausa) {
-        target.x = Math.random() * (canvas.width - target.width);
-        target.y = Math.random() * (canvas.height - target.height);
-        puntos +=10;
-    }
-
-    target.draw();
-
     ctx.font = "30px Arial";
     ctx.fillText("Speed: " + speed, 150, 50);
     ctx.font = "30px Arial";
@@ -296,6 +350,14 @@ function draw() {
     }
 
     requestAnimationFrame(draw);
+}
+function checkRectCollision(area, muro) {
+    return (
+        area.x < muro.x + muro.width &&
+        area.x + area.width > muro.x &&
+        area.y < muro.y + muro.height &&
+        area.y + area.height > muro.y
+    );
 }
 
 draw();
