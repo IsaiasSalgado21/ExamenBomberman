@@ -19,6 +19,7 @@ let enPausa = true;
 let mover = null;
 let bloqueX = 0;
 let bloqueY = 0;
+let teclaPresionada = { 'ArrowUp': false, 'ArrowDown': false, 'ArrowRight': false, 'ArrowLeft': false };
 
 class Rectangulo {
     constructor(x, y, width, height, color ,imgSrc = null) {
@@ -45,25 +46,23 @@ class Rectangulo {
     }
 
     move() {
-        switch (direccion) {
-            case 'Up':
+        if(!enPausa){
+            if(teclaPresionada['ArrowUp']){
                 this.y -= speed;
-                if (this.y < 0) this.y = canvas.height - this.height;
-                break;
-            case 'Down':
+            }
+            if(teclaPresionada['ArrowDown']){
                 this.y += speed;
-                if (this.y > canvas.height - this.height) this.y = 0;
-                break;
-            case 'Right':
+            }
+            if(teclaPresionada['ArrowRight']){
                 this.x += speed;
-                if (this.x > canvas.width - this.width) this.x = 0;
-                break;
-            case 'Left':
+            }
+            if(teclaPresionada['ArrowLeft']){
                 this.x -= speed;
-                if (this.x < 0) this.x = canvas.width - this.width;
-                break;
-            default:
-                break;
+            }
+            if(this.x < 0) this.x = 0;
+            if(this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+            if(this.y < 0)this.y = 0;
+            if(this.y > canvas.height - this.height) this.y = canvas.height - this.height;
         }
     }
 
@@ -168,16 +167,17 @@ class Muro{
         }
     }
 }
+
 let bloquesMuro =[];
 for(let i = 0; i < 24; i++){
         bloqueX += 64;
-        bloquesMuro.push(new Muro(bloqueX, bloqueY +64, 32, 32, 'black', 'muro.png'));
-        bloquesMuro.push(new Muro(bloqueX, bloqueY + 576, 32, 32, 'black', 'muro.png'));
+        bloquesMuro.push(new Obstaculo(bloqueX, bloqueY +64, 32, 32, 'black', 'indestructible.png'));
+        bloquesMuro.push(new Obstaculo(bloqueX, bloqueY + 576, 32, 32, 'black', 'indestructible.png'));
     }
     bloqueX = 64;  
 for(let x = bloqueX; x < canvas.width - 32; x += 64){
     for(let y = bloqueY + 64; y < canvas.height - 128; y += 64){
-        bloquesMuro.push(new Muro(x, y, 32, 32, 'black', 'muro.png'));
+        bloquesMuro.push(new Obstaculo(x, y, 32, 32, 'black', 'indestructible.png'));
     }
 }
     function drawMuro() {
@@ -229,32 +229,22 @@ for(let i = 0; i < 25; i++){
 
 document.addEventListener("keydown", function(event) {
     event.preventDefault();
-    switch (event.key) {
-        case 'ArrowUp':
-            if(!enPausa) direccion = 'Up';
-            break;
-        case 'ArrowDown':
-            if(!enPausa)direccion = 'Down';
-            break;
-        case 'ArrowRight':
-            if(!enPausa)direccion = 'Right';
-            break;
-        case 'ArrowLeft':
-            if(!enPausa)direccion = 'Left';
-            break;
-        case 'Enter':
-            if(!enPausa)speed += 5;
-            break;
-        case ' ':
-            enPausa = !enPausa;
-            console.log('pausa')
-            console.log(enPausa);
-            break;
-        case 'a':
-            bombas.push(new Bomb(player.x, player.y, 32, 32, 'blue','bomba.png'));
-            break;
-        default:
-            break;
+    if(event.key in teclaPresionada){
+        teclaPresionada[event.key] = true;
+        
+    }
+    if(event.key === 'a'){
+        bombas.push(new Bomb(player.x, player.y, 32, 32, 'blue', 'bomba.png'));
+    }
+    if(event.key === ' '){
+        enPausa = !enPausa;
+    }
+});
+
+document.addEventListener("keyup", function(event){
+    event.preventDefault();
+    if(event.key in teclaPresionada){
+        teclaPresionada[event.key] = false;
     }
 });
 
@@ -270,6 +260,13 @@ function draw() {
     drawMuro();
     player.draw();
 
+    bloquesMuro.forEach(muro =>{
+        muro.draw()
+        if(player.checkCollision(muro)&& !enPausa){
+            direccion = mover;
+
+        }
+    })
     obstaculos.forEach(obstaculo => {
         obstaculo.draw();
 
