@@ -10,8 +10,8 @@
     <script >
 let canvas = document.getElementById("miCanvas");
 let ctx = canvas.getContext("2d");
-let posX = 100;
-let posY = 100;
+let posX = 64;
+let posY = 98;
 let direccion = '';
 let speed = 3;
 let puntos = 0;
@@ -20,7 +20,14 @@ let mover = null;
 let bloqueX = 0;
 let bloqueY = 0;
 let teclaPresionada = { 'ArrowUp': false, 'ArrowDown': false, 'ArrowRight': false, 'ArrowLeft': false };
+let startTime = performance.now();
 
+let sonidoExplosion = new Audio('bomba.mp3');
+let musicaFondo = new Audio('musicaEspera.mp3');
+musicaFondo.volume = 0.5; 
+sonidoExplosion.volume = 0.7;
+musicaFondo.loop = true;
+musicaFondo.play();
 class Rectangulo {
     constructor(x, y, width, height, color ,imgSrc = null) {
         this.x = x;
@@ -46,33 +53,80 @@ class Rectangulo {
     }
 
     move() {
-        if(!enPausa){
-            if(teclaPresionada['ArrowUp']){
-                this.y -= speed;
+    if (!enPausa) {
+        let nextX = this.x;
+        let nextY = this.y;
+
+        if (teclaPresionada['ArrowUp']) nextY -= speed;
+        if (teclaPresionada['ArrowDown']) nextY += speed;
+        if (teclaPresionada['ArrowRight']) nextX += speed;
+        if (teclaPresionada['ArrowLeft']) nextX -= speed;
+
+        let collisionX = false;
+        muroDestruible.forEach(muro => {
+            if (new Rectangulo(nextX, this.y, this.width, this.height).checkCollision(muro)) {
+                collisionX = true;
+                if (teclaPresionada['ArrowRight']) nextX = muro.x - this.width;
+                if (teclaPresionada['ArrowLeft']) nextX = muro.x + muro.width;
             }
-            if(teclaPresionada['ArrowDown']){
-                this.y += speed;
+        });
+
+        obstaculos.forEach(obstaculo => {
+            if (new Rectangulo(nextX, this.y, this.width, this.height).checkCollision(obstaculo)) {
+                collisionX = true;
+                if (teclaPresionada['ArrowRight']) nextX = obstaculo.x - this.width;
+                if (teclaPresionada['ArrowLeft']) nextX = obstaculo.x + obstaculo.width;
             }
-            if(teclaPresionada['ArrowRight']){
-                this.x += speed;
+        });
+        bloquesIndestructibles.forEach(bloque => {
+            if (new Rectangulo(nextX, this.y, this.width, this.height).checkCollision(bloque)) {
+                collisionX = true;
+                if (teclaPresionada['ArrowRight']) nextX = bloque.x - this.width;
+                if (teclaPresionada['ArrowLeft']) nextX = bloque.x + bloque.width;
             }
-            if(teclaPresionada['ArrowLeft']){
-                this.x -= speed;
+        });
+
+        let collisionY = false;
+        muroDestruible.forEach(muro => {
+            if (new Rectangulo(this.x, nextY, this.width, this.height).checkCollision(muro)) {
+                collisionY = true;
+                if (teclaPresionada['ArrowDown']) nextY = muro.y - this.height;
+                if (teclaPresionada['ArrowUp']) nextY = muro.y + muro.height;
             }
-            if(this.x < 0) this.x = 0;
-            if(this.x > canvas.width - this.width) this.x = canvas.width - this.width;
-            if(this.y < 0)this.y = 0;
-            if(this.y > canvas.height - this.height) this.y = canvas.height - this.height;
-        }
+        });
+
+        obstaculos.forEach(obstaculo => {
+            if (new Rectangulo(this.x, nextY, this.width, this.height).checkCollision(obstaculo)) {
+                collisionY = true;
+                if (teclaPresionada['ArrowDown']) nextY = obstaculo.y - this.height;
+                if (teclaPresionada['ArrowUp']) nextY = obstaculo.y + obstaculo.height;
+            }
+        });
+        bloquesIndestructibles.forEach(bloque => {
+            if (new Rectangulo(this.x, nextY, this.width, this.height).checkCollision(bloque)) {
+                collisionY = true;
+                if (teclaPresionada['ArrowDown']) nextY = bloque.y - this.height;
+                if (teclaPresionada['ArrowUp']) nextY = bloque.y + bloque.height;
+            }
+        });
+
+        if (!collisionX) this.x = nextX;
+        if (!collisionY) this.y = nextY;
+        if (this.x < 0) this.x = 0;
+        if (this.x > canvas.width - this.width) this.x = canvas.width - this.width;
+        if (this.y < 0) this.y = 0;
+        if (this.y > canvas.height - this.height) this.y = canvas.height - this.height;
     }
+}
 
     checkCollision(otherRect) {
+        let buffer = 5;
         return (
-            this.x < otherRect.x + otherRect.width &&
-            this.x + this.width > otherRect.x &&
-            this.y < otherRect.y + otherRect.height &&
-            this.y + this.height > otherRect.y
-        );
+        this.x + buffer < otherRect.x + otherRect.width &&
+        this.x + this.width - buffer > otherRect.x &&
+        this.y + buffer < otherRect.y + otherRect.height &&
+        this.y + this.height - buffer > otherRect.y
+    );
     }
 }
 class Bomb{
@@ -84,7 +138,7 @@ class Bomb{
         this.color = color;
         this.image = null;
         this.explosion = false;
-        this.radioExplosion = 32 * 2;
+        this.radioExplosion = 16 * 2;
         this.duracionExplosion = 2000;
         this.tiempoExplosion = 2000;
         this.explosionTermino = false;
@@ -110,6 +164,7 @@ class Bomb{
     explotar(){
         this.explosion = true;
         this.tiempoExplosion = performance.now();
+        sonidoExplosion.play();
     }
     update(){
         if(this.explosion){
@@ -199,27 +254,44 @@ class Muro{
             ctx.fillRect(this.x, this.y, this.width, this.height);
         }
     }
+    checkCollision(otherRect) {
+        return (
+            this.x < otherRect.x + otherRect.width &&
+            this.x + this.width > otherRect.x &&
+            this.y < otherRect.y + otherRect.height &&
+            this.y + this.height > otherRect.y
+        );
+    }
+    destruir(){
+        if(this.destruible){
+            return true;
+        }
+        return false;
+    }
 }
 
-let bloquesMuro =[];
+let bloquesIndestructibles =[];
 for(let i = 0; i < 24; i++){
         bloqueX += 64;
-        bloquesMuro.push(new Obstaculo(bloqueX, bloqueY +64, 32, 32, 'black', 'indestructible.png'));
-        bloquesMuro.push(new Obstaculo(bloqueX, bloqueY + 576, 32, 32, 'black', 'indestructible.png'));
+        bloquesIndestructibles.push(new Obstaculo(bloqueX, bloqueY +64, 32, 32, 'black', 'indestructible.png'));
+        bloquesIndestructibles.push(new Obstaculo(bloqueX, bloqueY + 576, 32, 32, 'black', 'indestructible.png'));
     }
     bloqueX = 64;  
 for(let x = bloqueX; x < canvas.width - 32; x += 64){
     for(let y = bloqueY + 64; y < canvas.height - 128; y += 64){
-        bloquesMuro.push(new Obstaculo(x, y, 32, 32, 'black', 'indestructible.png'));
+        bloquesIndestructibles.push(new Obstaculo(x, y, 32, 32, 'black', 'indestructible.png'));
     }
 }
     function drawMuro() {
-    bloquesMuro.forEach(muro => {
+        bloquesIndestructibles.forEach(muro => {
         muro.draw();
     });
 }
 
+let player = new Rectangulo(posX, posY, 28, 28, 'pink', 'bomberman.png');
 let bloquesMapa = [];
+let bombas = [];
+
 for(let i = 0; i < 24; i++){
         bloqueX += 32;
         bloquesMapa.push(new Mapa(bloqueX, bloqueY +32, 32, 32, 'black', 'pasto.png'));
@@ -231,10 +303,6 @@ for(let x = bloqueX; x < canvas.width - 32; x += 32){
         bloquesMapa.push(new Mapa(x, y, 32, 32, 'black', 'pasto.png'));
     }
 }
-
-let player = new Rectangulo(posX, posY, 32, 32, 'pink', 'bomberman.png');
-
-let bombas = [];
 
 const obstaculos = [];
 bloqueX = 0;
@@ -255,15 +323,29 @@ for(let i = 0; i < 25; i++){
         bloque.draw();
     });
 }
+    let muroDestruible = [];
+        function generarMuros() {
+            let startX = 96;
+            let startY = 64;
+            let gap = 64;
+            let width = 32;
+            let height = 32;
 
-let muroDestruible = [];
-function generarMuros(){
-    for(let i = 1; i < 10; i++){
-        for(let j = 1; j < 10; j++)[
-
-        ]
-    }
-}
+            for (let x = startX; x < canvas.width - width; x += gap) {
+                for (let y = startY; y < canvas.height - height; y += gap) {
+                    let muro = new Muro(x, y, width, height, 'brown', 'muro.png', true);
+                    muroDestruible.push(muro);
+                }
+            }
+            startY = 32;
+            for (let x = startX; x < canvas.width - width; x += gap) {
+                for (let y = startY; y < canvas.height - height; y += gap) {
+                    let muro = new Muro(x, y, width, height, 'brown', 'muro.png', true);
+                    muroDestruible.push(muro);
+                }
+            }
+        }
+        generarMuros();
 
 document.addEventListener("keydown", function(event) {
     event.preventDefault();
@@ -296,17 +378,20 @@ function draw() {
     if(!enPausa){
     player.move();
     }
+    
     drawMap();
+    muroDestruible.forEach(muro => muro.draw());
+
     bombas.forEach(bomba =>{
         if(bomba.explosion){
             let explosionArea = bomba.getExplosionArea();
-            bloquesMuro.forEach((muro, i) => {
+            muroDestruible.forEach((muro, i) => {
                 if (muro.destruible) {
                     if (checkRectCollision(explosionArea.derecha, muro) ||
                         checkRectCollision(explosionArea.izquierda, muro) ||
                         checkRectCollision(explosionArea.arriba, muro) ||
                         checkRectCollision(explosionArea.abajo, muro)) {
-                        bloquesMuro.splice(i, 1);
+                        muroDestruible.splice(i, 1);
                     }
                 }
             });
@@ -319,24 +404,26 @@ function draw() {
         bomba.draw();
     });
     drawMuro();
-    
     player.draw();
 
-    bloquesMuro.forEach(muro =>{
+    bloquesIndestructibles.forEach(muro =>{
         muro.draw()
         if(player.checkCollision(muro)&& !enPausa){
             direccion = mover;
-
         }
     })
     obstaculos.forEach(obstaculo => {
         obstaculo.draw();
-
         if (player.checkCollision(obstaculo)&& !enPausa) {
             direccion = mover; 
             console.log("Colisión con un obstáculo");
         }
     });
+    let currentTime = performance.now();
+    let elapsedTime = Math.floor((currentTime - startTime) / 1000);
+    ctx.font = "30px Arial";
+    ctx.fillStyle = "black";
+    ctx.fillText("Tiempo: " + elapsedTime + "s", 450, 50);
 
     ctx.font = "30px Arial";
     ctx.fillText("Speed: " + speed, 150, 50);
@@ -348,7 +435,7 @@ function draw() {
         ctx.fillStyle = "black";
         ctx.fillText("PAUSA", canvas.width / 2 - 100, canvas.height / 2);
     }
-
+    
     requestAnimationFrame(draw);
 }
 function checkRectCollision(area, muro) {
